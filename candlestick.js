@@ -27,6 +27,8 @@ class CandleStick {
             this.draw();
         });
 
+        this.x_axis_height = 35;
+
         this.init_candle_width = 13;  // always odd number
         this.init_candle_margin = 3;
         this.init_wick_width = 1;  // always odd number
@@ -39,11 +41,12 @@ class CandleStick {
         this.x_scroll_speed = 2;
         this.zoom_sensitivity = 0.001;
 
-        this.data_url = "data/data.json";
+        this.data_url = "data/hour.json";
         this.data = [];
         this.get_data();
 
         this.canvas.addEventListener("wheel", (e) => {
+
             e.preventDefault();
 
             let updated_canvas_begin_x = this.canvas_begin_x + e.deltaX * this.x_scroll_speed;
@@ -104,7 +107,7 @@ class CandleStick {
 
         this.max_high_in_view = Math.max(...this.data_in_view.map(d => d[2]));
         this.min_low_in_view = Math.min(...this.data_in_view.map(d => d[3]));
-        this.y_scale_factor = this.canvas.height / (this.max_high_in_view - this.min_low_in_view);
+        this.y_scale_factor = (this.canvas.height - this.x_axis_height) / (this.max_high_in_view - this.min_low_in_view);
 
         this.upcandle_path = new Path2D();
         this.downcandle_path = new Path2D();
@@ -130,32 +133,53 @@ class CandleStick {
         });
 
         requestAnimationFrame(() => {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            // this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.fillStyle = "#f8f8f8";
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height - this.x_axis_height);
             this.ctx.fillStyle = "#4a4948";
             this.ctx.fill(this.wick_path);
             this.ctx.fillStyle = "#B8D8BE";
             this.ctx.fill(this.upcandle_path);
             this.ctx.fillStyle = "#EE6969";
             this.ctx.fill(this.downcandle_path);
+            // this.ctx.fillStyle = "#f8f8f8";
+            // this.ctx.fillRect(0, this.canvas.height - this.x_axis_height, this.canvas.width, this.x_axis_height);
+
+            this.crosshair_ctx.clearRect(0, 0, this.crosshair_canvas.width, this.crosshair_canvas.height);
         });
 
     }
     draw_crosshair(x, y) {
-        const cross_hair_data_index = Math.floor((x + this.canvas_begin_x) / (this.candle_width + 2*this.candle_margin));
+        let cross_hair_data_index = Math.floor((x + this.canvas_begin_x) / (this.candle_width + 2*this.candle_margin));
         const cross_hair_x = (this.candle_width + 2*this.candle_margin) * cross_hair_data_index + this.candle_margin + this.candle_width/2 - this.canvas_begin_x;
         // round to nearest 0.5
         const cross_hair_y = Math.round(y/0.5)*0.5;
+
+        cross_hair_data_index = Math.max(cross_hair_data_index, 0);
+        cross_hair_data_index = Math.min(cross_hair_data_index, this.data.length - 1);
+        const date_string = new Date(this.data[cross_hair_data_index][0]).toString();
+        const label_text = " " + date_string.slice(0, 10) + "," + date_string.slice(15, 21) + " ";
+        const label_width = this.crosshair_ctx.measureText(label_text).width;
+
 
         requestAnimationFrame(() => {
             this.crosshair_ctx.clearRect(0, 0, this.crosshair_canvas.width, this.crosshair_canvas.height);
             this.crosshair_ctx.setLineDash([5, 5]);
             this.crosshair_ctx.beginPath();
             this.crosshair_ctx.moveTo(cross_hair_x, 0);
-            this.crosshair_ctx.lineTo(cross_hair_x, this.crosshair_canvas.height);
+            this.crosshair_ctx.lineTo(cross_hair_x, this.crosshair_canvas.height - this.x_axis_height);
             this.crosshair_ctx.moveTo(0, y);
             this.crosshair_ctx.lineTo(this.crosshair_canvas.width, y);
             this.crosshair_ctx.strokeStyle = "#4a4948";
             this.crosshair_ctx.stroke();
+
+            this.crosshair_ctx.fillStyle = "#4a4948";
+            this.crosshair_ctx.fillRect(cross_hair_x - label_width/2, this.crosshair_canvas.height - this.x_axis_height, label_width, this.x_axis_height);
+            this.crosshair_ctx.fillStyle = "#fff";
+            this.crosshair_ctx.font = this.x_axis_height - 10 + "px monospace";
+            this.crosshair_ctx.textAlign = "center";
+            this.crosshair_ctx.textBaseline = "middle";
+            this.crosshair_ctx.fillText(label_text, cross_hair_x, this.canvas.height - this.x_axis_height/2);
         });
     }
 }
