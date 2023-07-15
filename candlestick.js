@@ -6,7 +6,6 @@ var requestAnimationFrame = (
 
 class CandleStick {
     constructor(container_element) {
-        
         this.container_element = container_element;
         this.container_element.style.position = "relative";
 
@@ -28,7 +27,7 @@ class CandleStick {
             this.draw();
         });
 
-        this.x_axis_height = 35;
+        this.x_axis_height = 50;
 
         this.init_candle_width = 13;  // always odd number
         this.init_candle_margin = 3;
@@ -107,7 +106,7 @@ class CandleStick {
         const week_of_year = Math.floor(day_of_year/7);
         const labels = [
             {label: dt_obj.getFullYear(), level_value: dt_obj.getFullYear()},
-            {label: month, level_value: Math.floor(dt_obj.getMonth()/3)},
+            // {label: month, level_value: Math.floor(dt_obj.getMonth()/3)},
             {label: month, level_value: dt_obj.getMonth()},
             {label: dt_obj.getDate(), level_value: week_of_year}, 
             {label: dt_obj.getDate(), level_value: dt_obj.getDate()},
@@ -178,7 +177,8 @@ class CandleStick {
 
         requestAnimationFrame(() => {
             
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.fillStyle = "white"
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
             this.ctx.fillStyle = "#4a4948";
             this.ctx.fill(this.wick_path);
             this.ctx.fillStyle = "#B8D8BE";
@@ -186,10 +186,14 @@ class CandleStick {
             this.ctx.fillStyle = "#EE6969";
             this.ctx.fill(this.downcandle_path);
 
+            // draw x axis
+            this.ctx.fillStyle = "#4a4948";
+            this.ctx.fillRect(0, this.canvas.height - this.x_axis_height-1, this.canvas.width, 2);
+
             this.ctx.fillStyle = "#f8f8f8";
             this.ctx.fillRect(0, this.canvas.height - this.x_axis_height, this.canvas.width, this.x_axis_height);
             this.ctx.fillStyle = "#716f6e";
-            this.ctx.font = this.x_axis_height - 10 + "px monospace";
+            this.ctx.font = "bold " + this.x_axis_height/2 + "px monospace";
             this.ctx.textAlign = "center";
             this.ctx.textBaseline = "middle";
             let total_label_width = 0;
@@ -224,6 +228,10 @@ class CandleStick {
                         all_visible_label_x.push(label_x);
                     }
                 });
+
+                if (total_label_width > 0) {
+                    this.ctx.font = this.x_axis_height/2 + "px monospace";
+                }
             }
 
             this.crosshair_ctx.clearRect(0, 0, this.crosshair_canvas.width, this.crosshair_canvas.height);
@@ -262,7 +270,7 @@ class CandleStick {
             this.crosshair_ctx.fillStyle = "#4a4948";
             this.crosshair_ctx.fillRect(cross_hair_x - label_width/2, this.crosshair_canvas.height - this.x_axis_height, label_width, this.x_axis_height);
             this.crosshair_ctx.fillStyle = "#fff";
-            this.crosshair_ctx.font = this.x_axis_height - 10 + "px monospace";
+            this.crosshair_ctx.font = this.x_axis_height/2 + "px monospace";
             this.crosshair_ctx.textAlign = "center";
             this.crosshair_ctx.textBaseline = "middle";
             this.crosshair_ctx.fillText(label_text, cross_hair_x, this.canvas.height - this.x_axis_height/2);
