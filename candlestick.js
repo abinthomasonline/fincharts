@@ -6,6 +6,7 @@ var requestAnimationFrame = (
 
 class CandleStick {
     constructor(container_element) {
+        
         this.container_element = container_element;
         this.container_element.style.position = "relative";
 
@@ -96,6 +97,30 @@ class CandleStick {
         this.crosshair_canvas.width = rect.width * this.dpr;
         this.crosshair_canvas.height = rect.height * this.dpr;
     }
+    get_all_labels(dt_string) {
+        const dt_obj = new Date(dt_string);
+        dt_string = dt_obj.toString();
+        const minute_label = dt_string.slice(16, 21);
+        const month = dt_string.slice(4, 7);
+        const first_date_of_year = new Date(dt_obj.getFullYear(), 0, 1);
+        const day_of_year = Math.floor((dt_obj - first_date_of_year) / (1000 * 60 * 60 * 24)) + first_date_of_year.getDay();
+        const week_of_year = Math.floor(day_of_year/7);
+        const labels = [
+            {label: dt_obj.getFullYear(), level_value: dt_obj.getFullYear()},
+            {label: month, level_value: Math.floor(dt_obj.getMonth()/3)},
+            {label: month, level_value: dt_obj.getMonth()},
+            {label: dt_obj.getDate(), level_value: week_of_year}, 
+            {label: dt_obj.getDate(), level_value: dt_obj.getDate()},
+            {label: minute_label, level_value: Math.floor(dt_obj.getHours()/12)},
+            {label: minute_label, level_value: Math.floor(dt_obj.getHours()/6)},
+            {label: minute_label, level_value: Math.floor(dt_obj.getHours()/3)},
+            {label: minute_label, level_value: dt_obj.getHours()},
+            {label: minute_label, level_value: Math.floor(dt_obj.getMinutes()/30)},
+            {label: minute_label, level_value: Math.floor(dt_obj.getMinutes()/10)},
+            {label: minute_label, level_value: dt_obj.getMinutes()}
+        ];
+        return labels;
+    }
     draw() {
         this.data_start_index = Math.floor(this.canvas_begin_x / (this.candle_width + 2*this.candle_margin));
         this.data_start_index = Math.max(this.data_start_index, 0);
@@ -112,6 +137,11 @@ class CandleStick {
         this.upcandle_path = new Path2D();
         this.downcandle_path = new Path2D();
         this.wick_path = new Path2D();
+
+        let prev_label = this.get_all_labels(this.data_in_view[0][0]);
+
+        this.label_x_array = [];
+        this.label_array = [];
 
         this.data_in_view.forEach((d, i) => {
             const index = this.data_start_index + i;
@@ -130,20 +160,71 @@ class CandleStick {
             } else {
                 this.downcandle_path.rect(candle_x_begin, candle_y_begin, this.candle_width, candle_height);
             }
+
+            const label_x = wick_x_begin + this.wick_width/2;
+            this.label_x_array.push(label_x);
+            const all_labels = this.get_all_labels(d[0]);
+            for (let i = 0; i < all_labels.length; i++) {
+                if (all_labels[i].level_value !== prev_label[i].level_value) {
+                    this.label_array.push([i, all_labels[i].label]);
+                    break;
+                }
+            }
+            if (this.label_array.length < this.label_x_array.length) {
+                this.label_array.push([-1, ""]);
+            }
+            prev_label = all_labels;
         });
 
         requestAnimationFrame(() => {
-            // this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.ctx.fillStyle = "#f8f8f8";
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height - this.x_axis_height);
+            
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             this.ctx.fillStyle = "#4a4948";
             this.ctx.fill(this.wick_path);
             this.ctx.fillStyle = "#B8D8BE";
             this.ctx.fill(this.upcandle_path);
             this.ctx.fillStyle = "#EE6969";
             this.ctx.fill(this.downcandle_path);
-            // this.ctx.fillStyle = "#f8f8f8";
-            // this.ctx.fillRect(0, this.canvas.height - this.x_axis_height, this.canvas.width, this.x_axis_height);
+
+            this.ctx.fillStyle = "#f8f8f8";
+            this.ctx.fillRect(0, this.canvas.height - this.x_axis_height, this.canvas.width, this.x_axis_height);
+            this.ctx.fillStyle = "#716f6e";
+            this.ctx.font = this.x_axis_height - 10 + "px monospace";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            let total_label_width = 0;
+
+            const data_width = this.label_x_array[this.label_x_array.length - 1] - this.label_x_array[0];
+            let all_visible_label_x = [];
+            const min_label_margin = 100;
+
+            for (let i = 0; i < prev_label.length; i++) {
+                this.label_x_array.forEach((label_x, j) => {
+                    if (this.label_array[j][0] === i) {
+                        const label_text = this.label_array[j][1];
+                        if (all_visible_label_x.some(x => Math.abs(x - label_x) < min_label_margin)) {
+                            return;
+                        }
+                        const label_width = this.ctx.measureText('00:00').width;
+                        total_label_width += label_width;
+                    }
+                });
+
+                if (total_label_width > data_width*0.5) {
+                    break;
+                }
+
+                this.label_x_array.forEach((label_x, j) => {
+                    if (this.label_array[j][0] === i) {
+                        const label_text = this.label_array[j][1];
+                        if (all_visible_label_x.some(x => Math.abs(x - label_x) < min_label_margin)) {
+                            return;
+                        }
+                        this.ctx.fillText(label_text, label_x, this.canvas.height - this.x_axis_height/2);
+                        all_visible_label_x.push(label_x);
+                    }
+                });
+            }
 
             this.crosshair_ctx.clearRect(0, 0, this.crosshair_canvas.width, this.crosshair_canvas.height);
         });
@@ -158,7 +239,12 @@ class CandleStick {
         cross_hair_data_index = Math.max(cross_hair_data_index, 0);
         cross_hair_data_index = Math.min(cross_hair_data_index, this.data.length - 1);
         const date_string = new Date(this.data[cross_hair_data_index][0]).toString();
-        const label_text = " " + date_string.slice(0, 10) + "," + date_string.slice(15, 21) + " ";
+        let label_text = " " + date_string.slice(0, 10);
+        if (date_string.slice(16, 21) === "00:00") {
+            label_text = label_text + " ";
+        } else {
+            label_text = label_text + "," + date_string.slice(15, 21) + " ";
+        }
         const label_width = this.crosshair_ctx.measureText(label_text).width;
 
 
