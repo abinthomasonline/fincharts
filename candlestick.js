@@ -28,6 +28,7 @@ class CandleStick {
         });
 
         this.x_axis_height = 50;
+        this.y_axis_width = 150;
 
         this.init_candle_width = 13;  // always odd number
         this.init_candle_margin = 3;
@@ -124,7 +125,7 @@ class CandleStick {
         this.data_start_index = Math.floor(this.canvas_begin_x / (this.candle_width + 2*this.candle_margin));
         this.data_start_index = Math.max(this.data_start_index, 0);
         this.data_start_index = Math.min(this.data_start_index, this.data.length - 1);
-        this.data_end_index = Math.floor((this.canvas_begin_x + this.canvas.width) / (this.candle_width + 2*this.candle_margin));
+        this.data_end_index = Math.floor((this.canvas_begin_x + this.canvas.width - this.y_axis_width) / (this.candle_width + 2*this.candle_margin));
         this.data_end_index = Math.min(this.data_end_index, this.data.length - 1);
         this.data_end_index = Math.max(this.data_end_index, 0);
         this.data_in_view = this.data.slice(this.data_start_index, this.data_end_index);
@@ -186,9 +187,14 @@ class CandleStick {
             this.ctx.fillStyle = "#EE6969";
             this.ctx.fill(this.downcandle_path);
 
+            this.ctx.fillStyle = "#4a4948";
+            this.ctx.fillRect(this.canvas.width - this.y_axis_width - 1, 0, 2, this.canvas.height - this.x_axis_height);
+            this.ctx.fillStyle = "#f8f8f8";
+            this.ctx.fillRect(this.canvas.width - this.y_axis_width, 0, this.y_axis_width, this.canvas.height - this.x_axis_height);
+
             // draw x axis
             this.ctx.fillStyle = "#4a4948";
-            this.ctx.fillRect(0, this.canvas.height - this.x_axis_height-1, this.canvas.width, 2);
+            this.ctx.fillRect(0, this.canvas.height - this.x_axis_height-1, this.canvas.width - this.y_axis_width, 2);
 
             this.ctx.fillStyle = "#f8f8f8";
             this.ctx.fillRect(0, this.canvas.height - this.x_axis_height, this.canvas.width, this.x_axis_height);
@@ -220,6 +226,9 @@ class CandleStick {
 
                 this.label_x_array.forEach((label_x, j) => {
                     if (this.label_array[j][0] === i) {
+                        if (j == this.label_x_array.length - 1) {
+                            return;
+                        }
                         const label_text = this.label_array[j][1];
                         if (all_visible_label_x.some(x => Math.abs(x - label_x) < min_label_margin)) {
                             return;
@@ -242,7 +251,7 @@ class CandleStick {
         let cross_hair_data_index = Math.floor((x + this.canvas_begin_x) / (this.candle_width + 2*this.candle_margin));
         const cross_hair_x = (this.candle_width + 2*this.candle_margin) * cross_hair_data_index + this.candle_margin + this.candle_width/2 - this.canvas_begin_x;
         // round to nearest 0.5
-        const cross_hair_y = Math.round(y/0.5)*0.5;
+        const cross_hair_y = (Math.round(y/0.5)*0.5).toFixed(2);
 
         cross_hair_data_index = Math.max(cross_hair_data_index, 0);
         cross_hair_data_index = Math.min(cross_hair_data_index, this.data.length - 1);
@@ -255,6 +264,10 @@ class CandleStick {
         }
         const label_width = this.crosshair_ctx.measureText(label_text).width;
 
+        const y_label = (Math.round((this.max_high_in_view - (y / this.y_scale_factor))/0.05)*0.05).toFixed(2);
+        // console.log(y);
+        const y_label_width = this.crosshair_ctx.measureText(y_label).width;
+
 
         requestAnimationFrame(() => {
             this.crosshair_ctx.clearRect(0, 0, this.crosshair_canvas.width, this.crosshair_canvas.height);
@@ -263,17 +276,19 @@ class CandleStick {
             this.crosshair_ctx.moveTo(cross_hair_x, 0);
             this.crosshair_ctx.lineTo(cross_hair_x, this.crosshair_canvas.height - this.x_axis_height);
             this.crosshair_ctx.moveTo(0, y);
-            this.crosshair_ctx.lineTo(this.crosshair_canvas.width, y);
+            this.crosshair_ctx.lineTo(this.crosshair_canvas.width - this.y_axis_width, y);
             this.crosshair_ctx.strokeStyle = "#4a4948";
             this.crosshair_ctx.stroke();
 
             this.crosshair_ctx.fillStyle = "#4a4948";
             this.crosshair_ctx.fillRect(cross_hair_x - label_width/2, this.crosshair_canvas.height - this.x_axis_height, label_width, this.x_axis_height);
+            this.crosshair_ctx.fillRect(this.crosshair_canvas.width - this.y_axis_width, cross_hair_y - this.x_axis_height/2, this.y_axis_width, this.x_axis_height);
             this.crosshair_ctx.fillStyle = "#fff";
             this.crosshair_ctx.font = this.x_axis_height/2 + "px monospace";
             this.crosshair_ctx.textAlign = "center";
             this.crosshair_ctx.textBaseline = "middle";
             this.crosshair_ctx.fillText(label_text, cross_hair_x, this.canvas.height - this.x_axis_height/2);
+            this.crosshair_ctx.fillText(y_label, this.crosshair_canvas.width - this.y_axis_width/2, cross_hair_y);
         });
     }
 }
