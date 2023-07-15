@@ -176,6 +176,9 @@ class CandleStick {
             prev_label = all_labels;
         });
 
+        const first_digit = (Math.round((this.max_high_in_view - this.min_low_in_view) / 10) + "")[0];
+        const y_interval = first_digit < 5 ? 5*Math.pow(10, (Math.round((this.max_high_in_view - this.min_low_in_view) / 10) + "").length - 1) : 10*Math.pow(10, (Math.round((this.max_high_in_view - this.min_low_in_view) / 10) + "").length - 1);
+
         requestAnimationFrame(() => {
             
             this.ctx.fillStyle = "white"
@@ -241,6 +244,12 @@ class CandleStick {
                 if (total_label_width > 0) {
                     this.ctx.font = this.x_axis_height/2 + "px monospace";
                 }
+            } 
+
+            for (let i = Math.round(this.min_low_in_view/y_interval)*y_interval; i <= this.max_high_in_view; i += y_interval) {
+                const y = (this.max_high_in_view - i)*this.y_scale_factor;
+                this.ctx.fillStyle = "#4a4948";
+                this.ctx.fillText((Math.round(i/0.05)*0.05).toFixed(2), this.canvas.width - this.y_axis_width/2, y);
             }
 
             this.crosshair_ctx.clearRect(0, 0, this.crosshair_canvas.width, this.crosshair_canvas.height);
